@@ -30,8 +30,7 @@ except ImportError as exc:
 
 
 TICKERS = ["TSM", "AAPL", "NVDA", "MSFT", "AMD", "SPY", "QQQ"]
-START_DATE = "2018-01-01"
-END_DATE = "2026-05-06"
+DATA_PERIOD = "max"
 INTERVALS = ["1d"]
 CACHE_DIR = Path("price_cache")
 ZIP_NAME = "price_cache.zip"
@@ -50,7 +49,8 @@ def normalize_download(df: pd.DataFrame) -> pd.DataFrame:
 
 def download_one(ticker: str, interval: str) -> Path:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    cache_path = CACHE_DIR / f"{ticker}_{START_DATE}_{END_DATE}_{interval}.csv"
+    range_tag = "MAX" if DATA_PERIOD == "max" else DATA_PERIOD
+    cache_path = CACHE_DIR / f"{ticker}_{range_tag}_{interval}.csv"
 
     if cache_path.exists():
         print(f"Already exists: {cache_path}")
@@ -59,29 +59,12 @@ def download_one(ticker: str, interval: str) -> Path:
     print(f"Downloading {ticker} ({interval})...")
     df = yf.download(
         ticker,
-        start=START_DATE,
-        end=END_DATE,
+        period=DATA_PERIOD,
         interval=interval,
         auto_adjust=False,
         progress=False,
         threads=False,
     )
-
-    if df.empty and interval == "1d":
-        print(f"Start/end download returned empty for {ticker}; trying period='max'.")
-        df = yf.download(
-            ticker,
-            period="max",
-            interval="1d",
-            auto_adjust=False,
-            progress=False,
-            threads=False,
-        )
-        if not df.empty:
-            df = df.loc[
-                (df.index >= pd.to_datetime(START_DATE))
-                & (df.index <= pd.to_datetime(END_DATE))
-            ]
 
     if df.empty:
         raise ValueError(f"Unable to download {ticker} ({interval}).")
